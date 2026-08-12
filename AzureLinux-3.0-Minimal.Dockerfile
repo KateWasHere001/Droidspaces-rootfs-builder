@@ -49,6 +49,10 @@ RUN tdnf -y update && \
 # Configure SSH for development access.
 RUN echo 'root:password!' | chpasswd && \
     mkdir -p /var/run/sshd && \
+    sed -i 's/^#Port 22$/Port 2222/' /etc/ssh/sshd_config && \
+    sed -i 's/^#AddressFamily any$/AddressFamily any/' /etc/ssh/sshd_config && \
+    sed -i 's/^#ListenAddress 0\.0\.0\.0$/ListenAddress 0.0.0.0/' /etc/ssh/sshd_config && \
+    sed -i 's/^#ListenAddress ::$/ListenAddress ::/' /etc/ssh/sshd_config && \
     sed -i 's/^#*PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     sed -i 's/^#*PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
     sed -i 's/^#*PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
