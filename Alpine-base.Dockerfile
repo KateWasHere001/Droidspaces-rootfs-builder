@@ -60,10 +60,23 @@ COPY scripts/bashrc.sh /etc/profile.d/ds-aliases.sh
 # Make scripts executable
 RUN chmod +x /etc/profile.d/ds-aliases.sh
 
+# Setup root password to password!
+RUN echo 'root:password!' | chpasswd
+
 # Configure environment
 RUN mkdir -p /var/run/sshd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    sed -i 's/^#*PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    ssh-keygen -A && \
+    sshd -t
+
+# Avoid loginuid failures inside the container, if the PAM rule exists
+RUN if [ -f /etc/pam.d/sshd ]; then \
+        sed -i \
+          's/^[[:space:]]*session[[:space:]]*required[[:space:]]*pam_loginuid\.so/session optional pam_loginuid.so/' \
+          /etc/pam.d/sshd; \
+    fi
 
 # Apply Android compatibility fixes
 RUN <<EOF_RUN

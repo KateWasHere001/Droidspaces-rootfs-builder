@@ -76,10 +76,21 @@ RUN ln -sf /usr/bin/iptables-legacy /usr/bin/iptables && \
 RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen && \
     locale-gen && \
     echo "LANG=en_US.UTF-8" > /etc/locale.conf && \
-    # Configure SSH (Disable Root Login)
+    # Configure SSH for development access
+    echo 'root:password!' | chpasswd && \
     mkdir -p /var/run/sshd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    sed -i 's/^#*PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    ssh-keygen -A && \
+    sshd -t
+
+# Avoid loginuid failures inside the container, if the PAM rule exists
+RUN if [ -f /etc/pam.d/sshd ]; then \
+        sed -i \
+          's/^[[:space:]]*session[[:space:]]*required[[:space:]]*pam_loginuid\.so/session optional pam_loginuid.so/' \
+          /etc/pam.d/sshd; \
+    fi
 
 # Fix DHCP in the container
 RUN mkdir -p /etc/systemd/network && \

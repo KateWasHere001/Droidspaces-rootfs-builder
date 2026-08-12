@@ -130,14 +130,25 @@ RUN update-alternatives --set iptables /usr/sbin/iptables-legacy && \
 RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen && \
     locale-gen && \
     update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 && \
-    # Configure SSH (Disable Root Login)
+    # Configure SSH for development access
+    echo 'root:password!' | chpasswd && \
     mkdir -p /var/run/sshd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    ssh-keygen -A && \
+    sshd -t && \
     # Create default user directories
     xdg-user-dirs-update && \
     # Remove default ubuntu user if it exists
     deluser --remove-home ubuntu || true
+
+# Avoid loginuid failures inside the container, if the PAM rule exists
+RUN if [ -f /etc/pam.d/sshd ]; then \
+        sed -i \
+          's/^[[:space:]]*session[[:space:]]*required[[:space:]]*pam_loginuid\.so/session optional pam_loginuid.so/' \
+          /etc/pam.d/sshd; \
+    fi
 
 # Fix DHCP in the container
 RUN mkdir -p /etc/systemd/network && \
